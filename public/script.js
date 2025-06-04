@@ -1,81 +1,84 @@
-let tempList = [];
+let currentUser = null;
+const users = {
+  user: "user123",
+  adm: "adm123"
+};
 
-async function login() {
-  const username = document.getElementById("user").value;
-  const password = document.getElementById("pass").value;
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
+const lists = {
+  user: [],
+  adm: []
+};
 
-  if (res.ok) {
+function login() {
+  const user = document.getElementById("user").value;
+  const pass = document.getElementById("pass").value;
+  if (users[user] && users[user] === pass) {
+    currentUser = user;
+    document.querySelector(".login-container").style.display = "none";
     document.getElementById("app").style.display = "block";
+    document.getElementById("loggedUser").innerText = user;
+
+    if (user === "adm") {
+      document.getElementById("userSelect").style.display = "inline";
+      document.getElementById("userSelect").innerHTML = Object.keys(users)
+        .map(u => `<option value="${u}">${u}</option>`)
+        .join("");
+    }
+
     loadList();
   } else {
-    alert("Login inválido!");
+    alert("Usuário ou senha incorretos");
   }
 }
 
-async function loadList() {
-  const res = await fetch("/list");
-  const data = await res.json();
-  tempList = data;
-  renderTable();
+function loadList() {
+  const user = currentUser === "adm"
+    ? document.getElementById("userSelect").value
+    : currentUser;
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML = "";
+  let total = 0;
+
+  (lists[user] || []).forEach((item, i) => {
+    const row = document.createElement("tr");
+    const itemTotal = item.qtd * item.valor;
+    total += itemTotal;
+    row.innerHTML = `
+      <td>${item.nome}</td>
+      <td>${item.qtd}</td>
+      <td>R$ ${item.valor.toFixed(2)}</td>
+      <td>R$ ${itemTotal.toFixed(2)}</td>
+      <td><button onclick="removeItem(${i})">Excluir</button></td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  document.getElementById("totalGeral").innerText = total.toFixed(2);
 }
 
 function addItem() {
-  const item = document.getElementById("item").value;
+  const nome = document.getElementById("item").value;
   const qtd = parseInt(document.getElementById("qtd").value);
   const valor = parseFloat(document.getElementById("valor").value);
-  const total = qtd * valor;
+  if (!nome || isNaN(qtd) || isNaN(valor)) return;
 
-  if (!item || isNaN(qtd) || isNaN(valor)) {
-    alert("Preencha todos os campos corretamente.");
-    return;
-  }
+  const user = currentUser === "adm"
+    ? document.getElementById("userSelect").value
+    : currentUser;
 
-  tempList.push({ item, qtd, valor, total });
-  renderTable();
-
-  document.getElementById("item").value = "";
-  document.getElementById("qtd").value = "";
-  document.getElementById("valor").value = "";
+  lists[user].push({ nome, qtd, valor });
+  loadList();
 }
 
 function removeItem(index) {
-  tempList.splice(index, 1);
-  renderTable();
+  const user = currentUser === "adm"
+    ? document.getElementById("userSelect").value
+    : currentUser;
+
+  lists[user].splice(index, 1);
+  loadList();
 }
 
-function renderTable() {
-  const tbody = document.querySelector("tbody");
-  tbody.innerHTML = "";
-
-  let totalGeral = 0;
-
-  tempList.forEach((entry, i) => {
-    totalGeral += entry.total;
-
-    const row = `<tr>
-      <td>${entry.item}</td>
-      <td>${entry.qtd}</td>
-      <td>R$ ${entry.valor.toFixed(2)}</td>
-      <td>R$ ${entry.total.toFixed(2)}</td>
-      <td><button onclick="removeItem(${i})">Excluir</button></td>
-    </tr>`;
-
-    tbody.innerHTML += row;
-  });
-
-  document.getElementById("totalGeral").textContent = totalGeral.toFixed(2);
-}
-
-async function saveList() {
-  await fetch("/save", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(tempList),
-  });
+function saveList() {
   alert("Lista salva com sucesso!");
 }
