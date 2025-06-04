@@ -1,51 +1,65 @@
-const backendUrl = ''; // Vazio, pois frontend é servido pelo mesmo domínio
+let username = '';
+let compras = [];
 
-// Login
-document.getElementById('loginForm')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
-
-  const res = await fetch(`${backendUrl}/login`, {
+function login() {
+  username = document.getElementById('username').value;
+  fetch('/api/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username })
+  }).then(res => res.json()).then(() => {
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    carregar();
+  });
+}
+
+function carregar() {
+  fetch(`/api/compras/${username}`)
+    .then(res => res.json())
+    .then(data => {
+      compras = data;
+      render();
+    });
+}
+
+function render() {
+  const tbody = document.getElementById('lista');
+  tbody.innerHTML = '';
+  let total = 0;
+
+  compras.forEach((item, i) => {
+    const row = document.createElement('tr');
+    const subtotal = (item.qtd * item.valor).toFixed(2);
+    total += parseFloat(subtotal);
+
+    row.innerHTML = `
+      <td><input value="${item.nome}" onchange="compras[${i}].nome=this.value"/></td>
+      <td><input type="number" value="${item.qtd}" onchange="compras[${i}].qtd=this.value"/></td>
+      <td><input type="number" value="${item.valor}" onchange="compras[${i}].valor=this.value"/></td>
+      <td>R$ ${subtotal}</td>
+      <td><button onclick="remover(${i})">🗑️</button></td>
+    `;
+    tbody.appendChild(row);
   });
 
-  const data = await res.json();
-  const msg = document.getElementById('message');
+  document.getElementById('totalGeral').innerText = total.toFixed(2);
+}
 
-  if (res.ok) {
-    localStorage.setItem('loggedIn', 'true');
-    window.location = 'dashboard.html';
-  } else {
-    msg.textContent = data.msg || 'Erro no login';
-  }
-});
+function addLinha() {
+  compras.push({ nome: '', qtd: 1, valor: 0 });
+  render();
+}
 
-// Cadastro
-document.getElementById('registerForm')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  const username = document.getElementById('regUsername').value.trim();
-  const password = document.getElementById('regPassword').value.trim();
+function remover(i) {
+  compras.splice(i, 1);
+  render();
+}
 
-  const res = await fetch(`${backendUrl}/register`, {
+function salvar() {
+  fetch(`/api/compras/${username}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const data = await res.json();
-  const msg = document.getElementById('regMessage');
-
-  if (res.ok) {
-    msg.style.color = 'lightgreen';
-    msg.textContent = data.msg || 'Cadastro feito com sucesso!';
-    setTimeout(() => {
-      window.location = 'index.html';
-    }, 1500);
-  } else {
-    msg.style.color = 'red';
-    msg.textContent = data.msg || 'Erro no cadastro';
-  }
-});
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ compras })
+  }).then(() => alert('Salvo!'));
+}
