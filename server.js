@@ -1,68 +1,54 @@
 const express = require('express');
-const path = require('path');
-const bcrypt = require('bcrypt');
-const Database = require('better-sqlite3');
-
+const fs = require('fs');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-// Cria/abre banco SQLite local
-const db = new Database('./data.sqlite');
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public'));
 
-// Cria tabela users se não existir
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT
-  )
-`).run();
+const DB_FILE = './database.json';
 
-app.use(express.json());
+// Carrega ou inicializa
+const loadDB = () => {
+  if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify({ users: [] }));
+  return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+};
 
-// Registro de usuário
-app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ msg: 'Usuário e senha são obrigatórios' });
+const saveDB = (db) => {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+};
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    stmt.run(username, hashedPassword);
-    res.status(201).json({ msg: 'Cadastro feito com sucesso!' });
-  } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.status(409).json({ msg: 'Usuário já existe' });
-    } else {
-      res.status(500).json({ msg: 'Erro interno no servidor' });
-    }
+app.post('/api/login', (req, res) => {
+  const { username } = req.body;
+  const db = loadDB();
+
+  let user = db.users.find(u => u.username === username);
+  if (!user) {
+    user = { username, compras: [] };
+    db.users.push(user);
+    saveDB(db);
   }
+
+  res.json({ success: true, user });
 });
 
-// Login
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ msg: 'Usuário e senha são obrigatórios' });
-
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-
-  if (!user) return res.status(401).json({ msg: 'Usuário ou senha inválidos' });
-
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(401).json({ msg: 'Usuário ou senha inválidos' });
-
-  // Login ok
-  res.json({ msg: 'Login efetuado com sucesso' });
+app.get('/api/compras/:username', (req, res) => {
+  const db = loadDB();
+  const user = db.users.find(u => u.username === req.params.username);
+  res.json(user?.compras || []);
 });
 
-// Serve frontend estático
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.post('/api/compras/:username', (req, res) => {
+  const db = loadDB();
+  const user = db.users.find(u => u.username === req.params.username);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-// Redireciona todas rotas para o index.html (SPA fallback)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  user.compras = req.body.compras;
+  saveDB(db);
+  res.json({ success: true });
 });
 
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
-});
+app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
