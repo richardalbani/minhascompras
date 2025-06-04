@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Minhas Compras</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-  <h1>Minhas Compras</h1>
-
-  <h2>Login</h2>
-  <input id="user" placeholder="Usuário" />
-  <input id="pass" type="password" placeholder="Senha" />
-  <button onclick="login()">Entrar</button>
+  <div class="login-container">
+    <img src="cart.png" alt="Carrinho" class="logo">
+    <h1>Minhas Compras</h1>
+    <input id="user" placeholder="Usuário" />
+    <input id="pass" type="password" placeholder="Senha" />
+    <button onclick="login()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+  </div>
 
   <div id="app" style="display:none;">
-    <h2>Lista</h2>
+    <h2>Lista de Compras - <span id="loggedUser"></span></h2>
+    <select id="userSelect" style="display:none;" onchange="loadList()"></select>
     <table id="lista">
       <thead>
         <tr>
