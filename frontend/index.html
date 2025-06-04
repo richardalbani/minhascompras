@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Compras</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f0f0; padding: 2rem; }
+        .login, .app { max-width: 600px; margin: auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.5rem; border: 1px solid #ddd; text-align: center; }
+        input { padding: 0.3rem; margin: 0.3rem; }
+        button { padding: 0.4rem 1rem; margin: 0.3rem; }
+    </style>
+</head>
+<body>
+<div class="login" id="loginBox">
+    <h2>Login</h2>
+    <input id="user" placeholder="Usuário"><br>
+    <input id="pass" type="password" placeholder="Senha"><br>
+    <button onclick="login()">Entrar</button>
+</div>
+<div class="app" id="appBox" style="display:none;">
+    <h1 id="total">Total: R$ 0</h1>
+    <input id="name" placeholder="Nome">
+    <input id="quantity" type="number" placeholder="Quantidade">
+    <input id="value" type="number" step="0.01" placeholder="Valor">
+    <button onclick="addItem()">Adicionar</button>
+    <table>
+        <thead>
+            <tr><th>Nome</th><th>Qtd</th><th>Valor</th><th>Total</th><th>Excluir</th></tr>
+        </thead>
+        <tbody id="listBody"></tbody>
+    </table>
+    <button onclick="logout()">Sair</button>
+</div>
+<script>
+    let currentUser = "";
+
+    function login() {
+        const username = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        }).then(r => r.json()).then(data => {
+            currentUser = username;
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('appBox').style.display = 'block';
+            loadItems();
+        }).catch(() => alert("Login inválido"));
+    }
+
+    function loadItems() {
+        fetch(`/api/items?username=${currentUser}`)
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.getElementById('listBody');
+                tbody.innerHTML = "";
+                data.items.forEach(item => {
+                    tbody.innerHTML += `<tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>R$ ${item.value.toFixed(2)}</td>
+                        <td>R$ ${item.total.toFixed(2)}</td>
+                        <td><button onclick="deleteItem(${item.id})">X</button></td>
+                    </tr>`;
+                });
+                document.getElementById('total').innerText = "Total: R$ " + data.total.toFixed(2);
+            });
+    }
+
+    function addItem() {
+        const name = document.getElementById('name').value;
+        const quantity = document.getElementById('quantity').value;
+        const value = document.getElementById('value').value;
+        fetch(`/api/items?username=${currentUser}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, quantity: parseInt(quantity), value: parseFloat(value) })
+        }).then(() => loadItems());
+    }
+
+    function deleteItem(id) {
+        fetch(`/api/items?id=${id}&username=${currentUser}`, { method: 'DELETE' })
+            .then(() => loadItems());
+    }
+
+    function logout() {
+        currentUser = "";
+        document.getElementById('loginBox').style.display = 'block';
+        document.getElementById('appBox').style.display = 'none';
+    }
+</script>
+</body>
+</html>
