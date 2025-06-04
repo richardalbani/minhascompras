@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SenderPlus - Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Bem-vindo ao SenderPlus</h1>
+    <p>Você está logado!</p>
+    <button id="logoutBtn">Sair</button>
+  </div>
+  <script>
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('loggedIn');
+      window.location = 'index.html';
+    };
+
+    // Se não estiver logado, redireciona pro login
+    if (!localStorage.getItem('loggedIn')) {
+      window.location = 'index.html';
+    }
+  </script>
+</body>
+</html>
