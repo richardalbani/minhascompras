@@ -24,9 +24,9 @@ app.get('/list', (req, res) => {
     res.json(data);
 });
 
-// Rota para salvar item novo
-app.post('/add', (req, res) => {
-    data.push(req.body);
+// Rota para salvar lista completa
+app.post('/save', (req, res) => {
+    data = req.body;
     fs.writeFileSync('./data.json', JSON.stringify(data, null, 2));
     res.json({ success: true });
 });
